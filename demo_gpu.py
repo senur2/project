@@ -67,8 +67,9 @@ def run(rank, size,model_name="resnet18",dataset="https://s3.amazonaws.com/fast-
     local_dataset = torch.utils.data.Subset(dataset, range(rank*localdataset_size, (rank+1)*localdataset_size))
     sample_size = bsize//size
     dataloader = DataLoader(local_dataset, batch_size=sample_size, shuffle=True)
-    model = setup_model(model_name).to(device_id)
-    replace_classification_head(model, len(dataset.classes)).to(device_id)
+    model = setup_model(model_name)
+    replace_classification_head(model, len(dataset.classes))
+    model = model.to(device_id)
     ddp_model = DDP(model, device_ids=[device_id])
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
