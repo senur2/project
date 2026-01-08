@@ -14,6 +14,18 @@ import matplotlib.pyplot as plt
 from torch.nn.parallel import DistributedDataParallel as DDP
 import sys
 
+def replace_classification_head(model, num_classes):
+    if hasattr(model, 'fc'):
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+    else:
+        if isinstance(model.classifier, nn.Sequential):
+            last_layer_idx = len(model.classifier) - 1
+            in_features = model.classifier[last_layer_idx].in_features
+            model.classifier[last_layer_idx] = nn.Linear(in_features, num_classes)
+        else:
+            # Cas simple
+            model.classifier = nn.Linear(model.classifier.in_features, num_classes)
+
 def setup_model(model_name):
     if not hasattr(models, model_name):
         raise ValueError(f"Le modèle {model_name} n'existe pas dans torchvision.models")
@@ -50,8 +62,8 @@ def run(rank, size,model_name="resnet18",dataset="https://s3.amazonaws.com/fast-
     local_dataset = torch.utils.data.Subset(dataset, range(rank*localdataset_size, (rank+1)*localdataset_size))
     sample_size = bsize//size
     dataloader = DataLoader(local_dataset, batch_size=sample_size, shuffle=True)
-    model = setup_model (model_name)
-    model.fc = nn.Linear(model.fc.in_features, len(dataset.classes))
+    model = setup_model(model_name)
+    replace_classification_head(model, len(dataset.classes)) # replace the classification head because mneset dont work with fc
     ddp_model = DDP(model)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
@@ -79,7 +91,7 @@ if __name__ == "__main__":
         sys.exit(1)
     file = sys.argv[4]
     device = int(sys.argv[5])
-    systeme_name = sys.argv[1],
+    systeme_name = sys.argv[1]
     dataset_url = sys.argv[2]
     batch_size = int(sys.argv[3]) 
     size = dist.get_world_size()
