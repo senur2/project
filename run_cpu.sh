@@ -17,7 +17,7 @@ do
 
         # Lancement de torchrun
         # --nproc_per_node=$CORES : C'est ici qu'on définit le nombre de cœurs utilisés
-        torchrun --nnodes=1 --nproc_per_node=$CORES demo_cpu.py \
+        torchrun --nnodes=1 --nproc_per_node=$CORES demo.py \
             "$MODEL" \
             "$DATASET" \
             "$BATCH" \
