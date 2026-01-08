@@ -80,11 +80,11 @@ if __name__ == "__main__":
     file = sys.argv[4]
     device = int(sys.argv[5])
     systeme_name = sys.argv[1],
-    dataset_url = sys.argv[2] 
+    dataset_url = sys.argv[2]
     batch_size = int(sys.argv[3]) 
     size = dist.get_world_size()
     rank = dist.get_rank()
-    com,loading = run(rank, size, model_name=systeme_name, dataset=dataset_url, batch_size=batch_size)
+    com,loading = run(rank, size, model_name=systeme_name, dataset=dataset_url, bsize=batch_size)
     with open(file, 'w') as f:
         f.write(f"{loading},{com},{device}\n")
         f.close()
