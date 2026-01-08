@@ -94,16 +94,17 @@ def run(rank, size,model_name="resnet18",dataset="https://s3.amazonaws.com/fast-
 if __name__ == "__main__":
     dist.init_process_group("nccl", init_method="env://")
     if len(sys.argv) < 4:
-        print("Usage: python demo.py <model_name> <dataset_url> <batch_size> <analyssis_file>")
-        print("Using default parameters.")
+        print("Usage: python demo.py <model_name> <dataset_url> <batch_size> <analyssis_file> <core>")
+        sys.exit(1)
     file = sys.argv[4]
+    device = int(sys.argv[5])
     systeme_name = sys.argv[1]
     dataset_url = sys.argv[2]
-    batch_size = int(sys.argv[3])
+    batch_size = int(sys.argv[3]) 
     size = dist.get_world_size()
     rank = dist.get_rank()
-    com,loading = run(rank, size, model=systeme_name, dataset=dataset_url, batch_size=batch_size)
+    com,loading = run(rank, size, model_name=systeme_name, dataset=dataset_url, bsize=batch_size)
     if rank == 0:
         with open(file, 'a') as f:
-            f.write(f"{loading},{com}, {batch_size}\n")
+            f.write(f"{loading},{com},{batch_size},{device}\n")
             f.close()

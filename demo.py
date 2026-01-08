@@ -99,6 +99,6 @@ if __name__ == "__main__":
     com,loading = run(rank, size, model_name=systeme_name, dataset=dataset_url, bsize=batch_size)
     if rank == 0:
         with open(file, 'a') as f:
-            f.write(f"{loading},{com},{device}\n")
+            f.write(f"{loading},{com},{batch_size},{device}\n")
             f.close()
    
