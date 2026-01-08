@@ -1,5 +1,5 @@
 module load conda
-conda activate pytorche
+conda activate pytorch
 2. Configuration du fichier de sortie
 OUTPUT="resultats_gpu.txt"
 DATASET="https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz"
