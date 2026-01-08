@@ -33,18 +33,17 @@ def setup_model(model_name):
     return model_creator()
 
 def run(rank, size,model_name="resnet18",dataset="https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz" ,bsize=32):
-    # --- 1. Set paths ---
-    dataset_url = dataset
     download_root = "./"
-    dataset_folder = os.path.join(download_root, model_name)
-
+    filename = dataset_url.split("/")[-1] 
+    dataset_folder_name = filename.replace(".tgz", "").replace(".tar.gz", "")
+    dataset_folder = os.path.join(download_root, dataset_folder_name)
     # --- 2. Download the dataset ---
     if not os.path.exists(dataset_folder):
-        print("Downloading", model_name,"...")
+        print("Downloading", filename,"...")
         download_url(dataset_url, download_root)
         # Extract
         print("Extracting...")
-        with tarfile.open(os.path.join(download_root, model_name+".tgz")) as tar:
+        with tarfile.open(os.path.join(download_root, filename+".tgz")) as tar:
             tar.extractall(path=download_root)
         print("Done!")
 
