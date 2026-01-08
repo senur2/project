@@ -44,7 +44,7 @@ def run(rank, size,model_name="resnet18",dataset="https://s3.amazonaws.com/fast-
         download_url(dataset_url, download_root)
         # Extract
         print("Extracting...")
-        with tarfile.open(os.path.join(download_root, model_name+"tgz")) as tar:
+        with tarfile.open(os.path.join(download_root, model_name+".tgz")) as tar:
             tar.extractall(path=download_root)
         print("Done!")
 
