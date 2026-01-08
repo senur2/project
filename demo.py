@@ -24,7 +24,7 @@ def run(rank, size,model_name="resnet18",dataset="https://s3.amazonaws.com/fast-
     # --- 1. Set paths ---
     dataset_url = dataset
     download_root = "./"
-    dataset_folder = os.path.join(download_root, model)
+    dataset_folder = os.path.join(download_root, model_name)
 
     # --- 2. Download the dataset ---
     if not os.path.exists(dataset_folder):
