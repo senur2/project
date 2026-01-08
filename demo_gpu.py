@@ -14,14 +14,34 @@ from torchvision.datasets.utils import download_url
 import tarfile
 import sys
 
-def run(rank, size,model="resnet18",dataset="https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz" ,bsize=32):
+def replace_classification_head(model, num_classes):
+    if hasattr(model, 'fc'):
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+    else:
+        if isinstance(model.classifier, nn.Sequential):
+            last_layer_idx = len(model.classifier) - 1
+            in_features = model.classifier[last_layer_idx].in_features
+            model.classifier[last_layer_idx] = nn.Linear(in_features, num_classes)
+        else:
+            # Cas simple
+            model.classifier = nn.Linear(model.classifier.in_features, num_classes)
+
+def setup_model(model_name):
+    if not hasattr(models, model_name):
+        raise ValueError(f"Le modèle {model_name} n'existe pas dans torchvision.models")
+    model_creator = getattr(models, model_name)
+    return model_creator()
+
+def run(rank, size,model_name="resnet18",dataset="https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz" ,bsize=32):
     torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
     # create model and move it to GPU with id rank
     device_id = rank % torch.cuda.device_count()
     # --- 1. Set paths ---
     dataset_url = dataset
     download_root = "./"
-    dataset_folder = os.path.join(download_root, model)
+    filename = dataset_url.split("/")[-1] 
+    dataset_folder_name = filename.replace(".tgz", "").replace(".tar.gz", "")
+    dataset_folder = os.path.join(download_root, dataset_folder_name)
 
     # --- 2. Download the dataset ---
     if not os.path.exists(dataset_folder):
@@ -29,7 +49,7 @@ def run(rank, size,model="resnet18",dataset="https://s3.amazonaws.com/fast-ai-im
         download_url(dataset_url, download_root)
         # Extract
         print("Extracting...")
-        with tarfile.open(os.path.join(download_root, model + "tgz")) as tar:
+        with tarfile.open(os.path.join(download_root, filename)) as tar:
             tar.extractall(path=download_root)
         print("Done!")
 
@@ -47,8 +67,8 @@ def run(rank, size,model="resnet18",dataset="https://s3.amazonaws.com/fast-ai-im
     local_dataset = torch.utils.data.Subset(dataset, range(rank*localdataset_size, (rank+1)*localdataset_size))
     sample_size = bsize//size
     dataloader = DataLoader(local_dataset, batch_size=sample_size, shuffle=True)
-    model = models.resnet18().to(device_id)
-    model.fc = nn.Linear(model.fc.in_features, len(dataset.classes)).to(device_id)
+    model = setup_model(model_name).to(device_id)
+    replace_classification_head(model, len(dataset.classes)).to(device_id)
     ddp_model = DDP(model, device_ids=[device_id])
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
@@ -77,12 +97,13 @@ if __name__ == "__main__":
         print("Usage: python demo.py <model_name> <dataset_url> <batch_size> <analyssis_file>")
         print("Using default parameters.")
     file = sys.argv[4]
-    systeme_name = sys.argv[1] if len(sys.argv) > 1 else "resnet18"
-    dataset_url = sys.argv[2] if len(sys.argv) > 2 else "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz"
-    batch_size = int(sys.argv[3]) if len(sys.argv) > 3 else 32
+    systeme_name = sys.argv[1]
+    dataset_url = sys.argv[2]
+    batch_size = int(sys.argv[3])
     size = dist.get_world_size()
     rank = dist.get_rank()
     com,loading = run(rank, size, model=systeme_name, dataset=dataset_url, batch_size=batch_size)
-    with open(file, 'w') as f:
-        f.write(f"{loading},{com}, {batch_size}\n")
-        f.close()
+    if rank == 0:
+        with open(file, 'a') as f:
+            f.write(f"{loading},{com}, {batch_size}\n")
+            f.close()
