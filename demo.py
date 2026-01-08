@@ -14,7 +14,13 @@ import matplotlib.pyplot as plt
 from torch.nn.parallel import DistributedDataParallel as DDP
 import sys
 
-def run(rank, size,model="resnet18",dataset="https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz" ,bsize=32):
+def setup_model(model_name):
+    if not hasattr(models, model_name):
+        raise ValueError(f"Le modèle {model_name} n'existe pas dans torchvision.models")
+    model_creator = getattr(models, model_name)
+    return model_creator()
+
+def run(rank, size,model_name="resnet18",dataset="https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz" ,bsize=32):
     # --- 1. Set paths ---
     dataset_url = dataset
     download_root = "./"
@@ -22,11 +28,11 @@ def run(rank, size,model="resnet18",dataset="https://s3.amazonaws.com/fast-ai-im
 
     # --- 2. Download the dataset ---
     if not os.path.exists(dataset_folder):
-        print("Downloading", model,"...")
+        print("Downloading", model_name,"...")
         download_url(dataset_url, download_root)
         # Extract
         print("Extracting...")
-        with tarfile.open(os.path.join(download_root, model+"tgz")) as tar:
+        with tarfile.open(os.path.join(download_root, model_name+"tgz")) as tar:
             tar.extractall(path=download_root)
         print("Done!")
 
@@ -44,7 +50,7 @@ def run(rank, size,model="resnet18",dataset="https://s3.amazonaws.com/fast-ai-im
     local_dataset = torch.utils.data.Subset(dataset, range(rank*localdataset_size, (rank+1)*localdataset_size))
     sample_size = bsize//size
     dataloader = DataLoader(local_dataset, batch_size=sample_size, shuffle=True)
-    model = models.resnet18()
+    model = setup_model (model_name)
     model.fc = nn.Linear(model.fc.in_features, len(dataset.classes))
     ddp_model = DDP(model)
     loss_fn = nn.CrossEntropyLoss()
@@ -72,10 +78,7 @@ if __name__ == "__main__":
         print("Usage: python demo.py <model_name> <dataset_url> <batch_size> <analyssis_file> <core>")
         sys.exit(1)
     file = sys.argv[4]
-    device = sys.argv[5]
-    if type(device) != int:
-        print("Please provide an integer value for the number of core use.")
-        sys.exit(1)
+    device = int(sys.argv[5])
     systeme_name = sys.argv[1]
     dataset_url = sys.argv[2] 
     batch_size = int(sys.argv[3]) 
