@@ -92,7 +92,7 @@ def run(rank, size,model_name="resnet18",dataset="https://s3.amazonaws.com/fast-
     return et - et_read ,et_read - st
 
 if __name__ == "__main__":
-    dist.init_process_group("gloo", init_method="env://")
+    dist.init_process_group("nccl", init_method="env://")
     if len(sys.argv) < 4:
         print("Usage: python demo.py <model_name> <dataset_url> <batch_size> <analyssis_file>")
         print("Using default parameters.")
