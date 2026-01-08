@@ -38,14 +38,15 @@ def run(rank, size,model_name="resnet18",dataset="https://s3.amazonaws.com/fast-
     dataset_folder_name = filename.replace(".tgz", "").replace(".tar.gz", "")
     dataset_folder = os.path.join(download_root, dataset_folder_name)
     # --- 2. Download the dataset ---
-    if not os.path.exists(dataset_folder):
-        print("Downloading", filename,"...")
-        download_url(dataset_url, download_root)
-        # Extract
-        print("Extracting...")
-        with tarfile.open(os.path.join(download_root, filename)) as tar:
-            tar.extractall(path=download_root)
-        print("Done!")
+    if rank == 0:
+        if not os.path.exists(dataset_folder):
+            print("Downloading", filename,"...")
+            download_url(dataset_url, download_root)
+            # Extract
+            print("Extracting...")
+            with tarfile.open(os.path.join(download_root, filename)) as tar:
+                tar.extractall(path=download_root)
+            print("Done!")
 
     # --- 3. Define transforms ---
     transform_train = transforms.Compose([
@@ -96,7 +97,8 @@ if __name__ == "__main__":
     size = dist.get_world_size()
     rank = dist.get_rank()
     com,loading = run(rank, size, model_name=systeme_name, dataset=dataset_url, bsize=batch_size)
-    with open(file, 'w') as f:
-        f.write(f"{loading},{com},{device}\n")
-        f.close()
+    if rank == 0:
+        with open(file, 'w') as f:
+            f.write(f"{loading},{com},{device}\n")
+            f.close()
    
